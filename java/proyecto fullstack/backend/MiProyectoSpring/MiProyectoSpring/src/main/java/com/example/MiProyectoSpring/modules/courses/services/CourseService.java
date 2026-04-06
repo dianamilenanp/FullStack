@@ -82,4 +82,22 @@ public class CourseService {
                         .build();
     }
 
+    public ThirdPartyFileResponse findThirdPartyFile(Long thirdPartyId, Long fileTypeId, String username) {
+
+        ThirdParty thirdParty = this.entityExistenceService.findRequired(ThirdParty.class, thirdPartyId, ErrorCode.ENTITY_NOT_FOUND, ERROR_MESSAGE, ControlledException.class);
+        ThirdPartyFileType thirdPartyFileType = this.entityExistenceService.findRequired(ThirdPartyFileType.class, fileTypeId, ErrorCode.ENTITY_NOT_FOUND, ERROR_MESSAGE, ControlledException.class);
+        ThirdPartyFile thirdPartyFile = this.thirdPartyFileRepository.findByThirdPartyAndType(thirdParty, thirdPartyFileType)
+                .orElseThrow(() -> new ControlledException(ErrorCode.ENTITY_NOT_FOUND, String.format("%s. The file does not exist for the third party with ID: %s and type ID: %s.", ERROR_MESSAGE, thirdPartyId, fileTypeId)));
+
+        try {
+            final String base64 = this.filesUtil.readFileAsBase64(Paths.get(thirdPartyFile.getFilepath()));
+            return ThirdPartyFileResponse.builder()
+                    .base64(base64)
+                    .originalFilename(thirdPartyFile.getOriginalFileName())
+                    .build();
+        } catch (IOException e) {
+            throw new UnexpectedException(ErrorCode.CANNOT_READ_FILE_FROM_DISK, e, String.format("%s. An error occurred reading file from disk. Detail: %s.", ERROR_MESSAGE, e.getMessage()));
+        }
+    }
+
 }
